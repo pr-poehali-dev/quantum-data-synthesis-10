@@ -1,7 +1,7 @@
 {
-  "name": "Discord",
-  "short_name": "Discord",
-  "description": "Мессенджер Discord",
+  "name": "Kiscord",
+  "short_name": "Kiscord",
+  "description": "Kiscord — мессенджер для общения",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#36393f",

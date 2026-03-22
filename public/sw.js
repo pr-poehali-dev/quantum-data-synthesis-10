@@ -1,4 +1,4 @@
-const CACHE = "discord-v1";
+const CACHE = "kiscord-v1";
 const ASSETS = ["/", "/index.html"];
 
 self.addEventListener("install", (e) => {

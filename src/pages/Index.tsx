@@ -88,7 +88,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User, token: string) => void
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Ошибка"); return; }
-      localStorage.setItem("discord_token", data.token);
+      localStorage.setItem("kiscord_token", data.token);
       onLogin(data.user, data.token);
     } finally {
       setLoading(false);
@@ -103,7 +103,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: User, token: string) => void
           <div className="w-20 h-20 bg-[#5865f2] rounded-3xl flex items-center justify-center mb-4 text-4xl shadow-lg">
             💬
           </div>
-          <h1 className="text-white text-3xl font-bold">Discord</h1>
+          <h1 className="text-white text-3xl font-bold">Kiscord</h1>
         </div>
 
         {/* Карточка */}
@@ -343,7 +343,7 @@ function CreateServerModal({ onClose, onCreate }: { onClose: () => void; onCreat
   const [icon, setIcon] = useState("💬");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const token = localStorage.getItem("discord_token") || "";
+  const token = localStorage.getItem("kiscord_token") || "";
 
   const ICONS = ["💬", "🎮", "🎵", "🎨", "💻", "🏆", "🔥", "🌍", "📚", "🎉", "⚡", "🦄"];
 
@@ -805,20 +805,20 @@ const Index = () => {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem("discord_token");
+    const saved = localStorage.getItem("kiscord_token");
     if (!saved) { setChecking(false); return; }
     fetch(`${API.auth}/me`, { headers: { "X-Session-Token": saved } })
       .then((r) => r.json())
       .then((d) => {
         if (d.user) { setUser(d.user); setToken(saved); }
-        else localStorage.removeItem("discord_token");
+        else localStorage.removeItem("kiscord_token");
       })
       .finally(() => setChecking(false));
   }, []);
 
   const handleLogin = (u: User, t: string) => { setUser(u); setToken(t); };
   const handleLogout = () => {
-    localStorage.removeItem("discord_token");
+    localStorage.removeItem("kiscord_token");
     setUser(null);
     setToken("");
   };
