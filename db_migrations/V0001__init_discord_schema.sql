@@ -1,0 +1,47 @@
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(32) UNIQUE NOT NULL,
+  display_name VARCHAR(64) NOT NULL,
+  avatar_color VARCHAR(16) NOT NULL DEFAULT '#5865f2',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS servers (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(64) NOT NULL,
+  icon VARCHAR(8) NOT NULL DEFAULT '💬',
+  color VARCHAR(16) NOT NULL DEFAULT '#5865f2',
+  owner_id INTEGER REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS channels (
+  id SERIAL PRIMARY KEY,
+  server_id INTEGER REFERENCES servers(id),
+  name VARCHAR(64) NOT NULL,
+  type VARCHAR(16) NOT NULL DEFAULT 'text',
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id SERIAL PRIMARY KEY,
+  channel_id INTEGER REFERENCES channels(id),
+  user_id INTEGER REFERENCES users(id),
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS server_members (
+  server_id INTEGER REFERENCES servers(id),
+  user_id INTEGER REFERENCES users(id),
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (server_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  token VARCHAR(64) PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

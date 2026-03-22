@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Get messages unauthorized",
+      "method": "GET",
+      "path": "/?channel_id=1",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Get channels unauthorized",
+      "method": "GET",
+      "path": "/?server_id=1",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
