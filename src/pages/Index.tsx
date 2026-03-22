@@ -44,22 +44,47 @@ interface Message {
   avatar: string;
 }
 
-// ---- Экран входа ----
+// ---- Экран входа / регистрации ----
 function LoginScreen({ onLogin }: { onLogin: (user: User, token: string) => void }) {
-  const [name, setName] = useState("");
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const isLogin = mode === "login";
+
+  const switchMode = (m: "login" | "register") => {
+    setMode(m);
+    setError("");
+    setPassword("");
+    setConfirmPassword("");
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    setLoading(true);
     setError("");
+
+    if (!isLogin && password !== confirmPassword) {
+      setError("Пароли не совпадают");
+      return;
+    }
+
+    setLoading(true);
     try {
+      const body: Record<string, string> = {
+        action: isLogin ? "login" : "register",
+        username: username.trim().toLowerCase(),
+        password,
+      };
+      if (!isLogin) body.display_name = displayName.trim() || username.trim();
+
       const res = await fetch(API.auth, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: name.trim().toLowerCase(), display_name: name.trim() }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Ошибка"); return; }
@@ -72,39 +97,141 @@ function LoginScreen({ onLogin }: { onLogin: (user: User, token: string) => void
 
   return (
     <div className="min-h-screen bg-[#36393f] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#2f3136] rounded-xl p-8 shadow-2xl">
+      <div className="w-full max-w-md">
+        {/* Логотип */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-[#5865f2] rounded-2xl flex items-center justify-center mb-4 text-3xl">
+          <div className="w-20 h-20 bg-[#5865f2] rounded-3xl flex items-center justify-center mb-4 text-4xl shadow-lg">
             💬
           </div>
-          <h1 className="text-white text-2xl font-bold">Добро пожаловать!</h1>
-          <p className="text-[#b9bbbe] text-sm mt-1">Введите ваше имя чтобы войти</p>
+          <h1 className="text-white text-3xl font-bold">Discord</h1>
         </div>
 
-        <form onSubmit={submit} className="space-y-4">
-          <div>
-            <label className="block text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-2">
-              Имя пользователя
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Введите имя..."
-              maxLength={32}
-              className="w-full bg-[#40444b] text-white placeholder-[#72767d] rounded px-4 py-3 outline-none focus:ring-2 focus:ring-[#5865f2] text-sm"
-              autoFocus
-            />
+        {/* Карточка */}
+        <div className="bg-[#2f3136] rounded-xl shadow-2xl overflow-hidden">
+          {/* Табы */}
+          <div className="flex border-b border-[#202225]">
+            {(["login", "register"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => switchMode(m)}
+                className={`flex-1 py-4 text-sm font-semibold transition-colors ${
+                  mode === m
+                    ? "text-white border-b-2 border-[#5865f2]"
+                    : "text-[#8e9297] hover:text-[#dcddde]"
+                }`}
+              >
+                {m === "login" ? "Вход" : "Регистрация"}
+              </button>
+            ))}
           </div>
-          {error && <p className="text-[#ed4245] text-sm">{error}</p>}
-          <button
-            type="submit"
-            disabled={!name.trim() || loading}
-            className="w-full bg-[#5865f2] hover:bg-[#4752c4] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 rounded transition-colors"
-          >
-            {loading ? "Входим..." : "Войти"}
-          </button>
-        </form>
+
+          <form onSubmit={submit} className="p-8 space-y-4">
+            {/* Заголовок */}
+            <div className="text-center mb-6">
+              <h2 className="text-white text-xl font-bold">
+                {isLogin ? "С возвращением!" : "Создать аккаунт"}
+              </h2>
+              <p className="text-[#b9bbbe] text-sm mt-1">
+                {isLogin ? "Рады снова видеть тебя!" : "Присоединяйся к нам сегодня!"}
+              </p>
+            </div>
+
+            {/* Логин */}
+            <div>
+              <label className="block text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-1.5">
+                Имя пользователя <span className="text-[#ed4245]">*</span>
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="example"
+                maxLength={32}
+                required
+                className="w-full bg-[#40444b] text-white placeholder-[#72767d] rounded px-4 py-3 outline-none focus:ring-2 focus:ring-[#5865f2] text-sm"
+                autoFocus
+              />
+            </div>
+
+            {/* Отображаемое имя — только при регистрации */}
+            {!isLogin && (
+              <div>
+                <label className="block text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-1.5">
+                  Отображаемое имя
+                </label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Как тебя называть?"
+                  maxLength={64}
+                  className="w-full bg-[#40444b] text-white placeholder-[#72767d] rounded px-4 py-3 outline-none focus:ring-2 focus:ring-[#5865f2] text-sm"
+                />
+              </div>
+            )}
+
+            {/* Пароль */}
+            <div>
+              <label className="block text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-1.5">
+                Пароль <span className="text-[#ed4245]">*</span>
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={isLogin ? "Введите пароль" : "Минимум 6 символов"}
+                required
+                className="w-full bg-[#40444b] text-white placeholder-[#72767d] rounded px-4 py-3 outline-none focus:ring-2 focus:ring-[#5865f2] text-sm"
+              />
+            </div>
+
+            {/* Подтверждение пароля — только при регистрации */}
+            {!isLogin && (
+              <div>
+                <label className="block text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-1.5">
+                  Повторите пароль <span className="text-[#ed4245]">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Повторите пароль"
+                  required
+                  className="w-full bg-[#40444b] text-white placeholder-[#72767d] rounded px-4 py-3 outline-none focus:ring-2 focus:ring-[#5865f2] text-sm"
+                />
+              </div>
+            )}
+
+            {/* Ошибка */}
+            {error && (
+              <div className="bg-[#ed4245]/10 border border-[#ed4245]/30 rounded px-4 py-3 flex items-center gap-2">
+                <Icon name="AlertCircle" size={16} className="text-[#ed4245] flex-shrink-0" />
+                <p className="text-[#ed4245] text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Кнопка */}
+            <button
+              type="submit"
+              disabled={!username.trim() || !password || loading}
+              className="w-full bg-[#5865f2] hover:bg-[#4752c4] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded transition-colors mt-2"
+            >
+              {loading ? (isLogin ? "Входим..." : "Создаём...") : isLogin ? "Войти" : "Зарегистрироваться"}
+            </button>
+
+            {/* Переключатель */}
+            <p className="text-[#72767d] text-xs text-center pt-1">
+              {isLogin ? "Нет аккаунта? " : "Уже есть аккаунт? "}
+              <button
+                type="button"
+                onClick={() => switchMode(isLogin ? "register" : "login")}
+                className="text-[#00b0f4] hover:underline"
+              >
+                {isLogin ? "Зарегистрируйся" : "Войди"}
+              </button>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );
