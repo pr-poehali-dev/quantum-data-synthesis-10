@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Unauthorized access",
+      "method": "GET",
+      "path": "/?action=profile_get",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
