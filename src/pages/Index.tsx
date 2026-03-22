@@ -237,6 +237,106 @@ function LoginScreen({ onLogin }: { onLogin: (user: User, token: string) => void
   );
 }
 
+// ---- Модалка создания канала ----
+function CreateChannelModal({
+  server,
+  token,
+  onClose,
+  onCreate,
+}: {
+  server: Server;
+  token: string;
+  onClose: () => void;
+  onCreate: (ch: Channel) => void;
+}) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState<"text" | "voice">("text");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API.channels}/create`, {
+        method: "POST",
+        headers: authHeaders(token),
+        body: JSON.stringify({ server_id: server.id, name: name.trim(), type }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Ошибка"); return; }
+      onCreate(data.channel);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-[#36393f] rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4">
+          <h2 className="text-white text-xl font-bold">Создать канал</h2>
+          <p className="text-[#b9bbbe] text-sm mt-1">в {server.icon} {server.name}</p>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="block text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-2">Тип канала</label>
+            <div className="grid grid-cols-2 gap-2">
+              {([["text", "# Текстовый", "Обычный чат"], ["voice", "🔊 Голосовой", "Голосовое общение"]] as const).map(([t, label, desc]) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  className={`p-3 rounded-lg text-left border-2 transition-colors ${
+                    type === t ? "border-[#5865f2] bg-[#5865f2]/10" : "border-[#40444b] bg-[#40444b] hover:border-[#5d6269]"
+                  }`}
+                >
+                  <div className="text-white text-sm font-medium">{label}</div>
+                  <div className="text-[#b9bbbe] text-xs mt-0.5">{desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-2">Название канала</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#72767d]">{type === "text" ? "#" : "🔊"}</span>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, "-"))}
+                placeholder={type === "text" ? "новый-канал" : "голосовой"}
+                maxLength={64}
+                autoFocus
+                className="w-full bg-[#40444b] text-white placeholder-[#72767d] rounded px-4 py-3 pl-8 outline-none focus:ring-2 focus:ring-[#5865f2] text-sm"
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-[#ed4245] text-sm">{error}</p>}
+
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose} className="flex-1 bg-transparent hover:underline text-[#b9bbbe] py-2.5 rounded font-medium transition-colors">
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim() || loading}
+              className="flex-1 bg-[#5865f2] hover:bg-[#4752c4] disabled:opacity-50 text-white py-2.5 rounded font-medium transition-colors"
+            >
+              {loading ? "Создаём..." : "Создать канал"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ---- Модалка создания сервера ----
 function CreateServerModal({ onClose, onCreate }: { onClose: () => void; onCreate: (s: Server) => void }) {
   const [name, setName] = useState("");
@@ -332,6 +432,7 @@ function DiscordApp({ user, token, onLogout }: { user: User; token: string; onLo
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [sending, setSending] = useState(false);
   const [showCreateServer, setShowCreateServer] = useState(false);
+  const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
@@ -431,12 +532,21 @@ function DiscordApp({ user, token, onLogout }: { user: User; token: string; onLo
     switchServer(s);
   };
 
+  const onChannelCreated = (ch: Channel) => {
+    setShowCreateChannel(false);
+    setChannels((prev) => [...prev, ch]);
+    switchChannel(ch);
+  };
+
   const textChannels = channels.filter((c) => c.type === "text");
   const voiceChannels = channels.filter((c) => c.type === "voice");
 
   return (
     <div className="h-screen flex bg-[#36393f] text-white overflow-hidden select-none">
       {showCreateServer && <CreateServerModal onClose={() => setShowCreateServer(false)} onCreate={onServerCreated} />}
+      {showCreateChannel && activeServer && (
+        <CreateChannelModal server={activeServer} token={token} onClose={() => setShowCreateChannel(false)} onCreate={onChannelCreated} />
+      )}
 
       {/* Серверная панель */}
       <div className="w-[72px] bg-[#202225] flex flex-col items-center py-3 gap-2 flex-shrink-0">
@@ -495,9 +605,18 @@ function DiscordApp({ user, token, onLogout }: { user: User; token: string; onLo
 
           {textChannels.length > 0 && (
             <div className="mb-2">
-              <div className="flex items-center gap-1 px-1 py-1 text-[#8e9297] text-xs font-semibold uppercase tracking-wide">
-                <Icon name="ChevronDown" size={12} />
-                <span>Текстовые каналы</span>
+              <div className="flex items-center px-1 py-1 text-[#8e9297] text-xs font-semibold uppercase tracking-wide group/header">
+                <Icon name="ChevronDown" size={12} className="mr-1" />
+                <span className="flex-1">Текстовые каналы</span>
+                {activeServer?.owner_id === user.id && (
+                  <button
+                    onClick={() => setShowCreateChannel(true)}
+                    title="Создать канал"
+                    className="opacity-0 group-hover/header:opacity-100 hover:text-white transition-opacity"
+                  >
+                    <Icon name="Plus" size={14} />
+                  </button>
+                )}
               </div>
               {textChannels.map((ch) => (
                 <div
